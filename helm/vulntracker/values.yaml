@@ -1,0 +1,93 @@
+# Default values for the VulnTracker chart.
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/your-org/vulntracker
+  # Pin to an immutable digest in real deployments; tag shown for readability.
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+# Application configuration passed as non-secret environment variables.
+config:
+  appEnv: production
+  # Point at the in-cluster notification service.
+  notifyServiceUrl: "http://vulntracker-notify:3001"
+  shareBaseUrl: "https://vulntracker.example.com"
+  shareLinkTtlHours: "24"
+  accessTokenExpireMinutes: "30"
+  jwtAlgorithm: "HS256"
+  # Comma-separated allowlist of browser origins for CORS.
+  corsAllowedOrigins: "https://vulntracker.example.com"
+
+# Secrets are NEVER stored in this chart or in plain env vars. They are synced
+# from an external secrets manager (AWS Secrets Manager / GCP Secret Manager /
+# Vault) into a Kubernetes Secret by the External Secrets Operator.
+externalSecrets:
+  enabled: true
+  # Name of a pre-configured ClusterSecretStore / SecretStore.
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+  refreshInterval: "1h"
+  # Remote keys in the secrets manager.
+  remoteKeys:
+    secretKey: "vulntracker/prod/jwt-secret-key"
+    databaseUrl: "vulntracker/prod/database-url"
+
+# Fallback: if externalSecrets.enabled is false, you MUST create the Secret
+# named below out-of-band (e.g. sealed-secrets). It is never templated here.
+existingSecretName: "vulntracker-secrets"
+
+# Restrict inbound traffic. Only the ingress controller namespace may reach
+# the pods on the app port; everything else is denied by default.
+networkPolicy:
+  enabled: true
+  ingressControllerNamespace: ingress-nginx
+  # Allow the notify service pods to call back if needed.
+  allowNamespaces: []
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+
+# Pod- and container-level security hardening.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 10001
+  capabilities:
+    drop:
+      - ALL
+
+serviceAccount:
+  create: true
+  name: ""
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

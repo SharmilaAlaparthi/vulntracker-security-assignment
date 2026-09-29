@@ -1,0 +1,25 @@
+# Keep the build context small and avoid shipping secrets / local state.
+.git
+.github
+.venv
+venv
+env
+__pycache__
+*.pyc
+*.pyo
+*.db
+*.sqlite3
+.env
+.env.*
+!.env.example
+.pytest_cache
+.coverage
+htmlcov
+notify
+tests
+reports
+docs
+helm
+*.md
+Dockerfile
+.dockerignore
